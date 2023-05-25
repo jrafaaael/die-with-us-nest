@@ -6,14 +6,12 @@ interface Params {
 }
 
 export function replacePlaceholders({ str, placeholders }: Params) {
-  const regex = new RegExp(`\\${placeholders}`, "g");
-  let result = "";
+  let updatedStr = str;
 
-  for (const [_, value] of Object.entries(placeholders)) {
-    const valueStringified = String(value);
-    result = str.replace(regex, valueStringified);
-    console.log(result);
-  }
+  Object.keys(placeholders).forEach((placeholder) => {
+    const regex = new RegExp(`{${placeholder}}`, "g");
+    updatedStr = updatedStr.replace(regex, String(placeholders[placeholder]));
+  });
 
-  return result;
+  return updatedStr;
 }
