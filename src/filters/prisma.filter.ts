@@ -6,14 +6,17 @@ import { Response } from "express";
 import { replacePlaceholders } from "../utils/replace-placeholders";
 
 const PRISMA_ERROR_REFERENCE = {
-  P2002: (meta: { target: [string] }) => {
-    const target = meta.target[0];
-
-    return {
+  P2002: (meta: { target: string[] }) => {
+    const errors = meta.target.map((field) => ({
       message: replacePlaceholders({
         str: "{column} already exists",
-        placeholders: { column: target },
+        placeholders: { column: field },
       }),
+      field,
+    }));
+
+    return {
+      errors,
       statusCode: HttpStatus.CONFLICT,
     };
   },
@@ -30,7 +33,7 @@ export class PrismaClientKnowRequestErrorFilter extends BaseExceptionFilter {
     if (errorReference) {
       return response
         .status(errorReference.statusCode)
-        .json({ message: errorReference.message });
+        .json({ errors: errorReference.errors });
     }
 
     super.catch(exception, host);
