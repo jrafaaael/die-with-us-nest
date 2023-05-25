@@ -3,25 +3,34 @@ import { BaseExceptionFilter } from "@nestjs/core";
 import { Prisma } from "@prisma/client";
 import { Response } from "express";
 
-import { replacePlaceholders } from "src/utils/replace-placeholders";
+import { replacePlaceholders } from "../utils/replace-placeholders";
 
-import { PRISMA_ERRORS } from "../utils/errors";
+const PRISMA_ERROR_REFERENCE = {
+  P2002: (meta: { target: [string] }) => {
+    const target = meta.target[0];
+
+    return {
+      message: replacePlaceholders({
+        str: "{column} already exists",
+        placeholders: { column: target },
+      }),
+      statusCode: HttpStatus.CONFLICT,
+    };
+  },
+};
 
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaClientKnowRequestErrorFilter extends BaseExceptionFilter {
   catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const draftMessage = PRISMA_ERRORS?.[exception.code]?.message;
-    const message = replacePlaceholders({
-      str: draftMessage,
-      placeholders: {
-        column: exception.meta.target[0],
-      },
-    });
+    const errorReference =
+      PRISMA_ERROR_REFERENCE?.[exception.code]?.(exception.meta) ?? null;
 
-    if (message) {
-      return response.status(HttpStatus.CONFLICT).json({ message });
+    if (errorReference) {
+      return response
+        .status(errorReference.statusCode)
+        .json({ message: errorReference.message });
     }
 
     super.catch(exception, host);
