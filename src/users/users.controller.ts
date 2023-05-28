@@ -15,9 +15,7 @@ export class UsersController {
     const { username } = createUser;
     const user = await this.usersService.create(username);
 
-    return {
-      user,
-    };
+    return user;
   }
 
   @Get("username-available")
